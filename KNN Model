@@ -1,0 +1,78 @@
+#Get/Set Work Directory
+getwd()
+setwd("~/Desktop/Customer Survey")
+
+#Installing Packages
+install.packages("caret", dependencies = c("Depends", "Suggests")) 
+yinstall.packages("ggplot2", dependencies=TRUE) 
+install.packages("pls", dependencies = TRUE)
+
+library(caret)
+library(pls)
+library(readr)
+library(class)
+
+#Pre-processing
+CompletedSurvey <- read_csv("~/Desktop/Customer Survey/Survey Complete Results.csv", col_names = FALSE, skip = 2)
+names(CompletedSurvey) <- c("Salary","Age","Elevel","Car","Zipcode","Credit","Brand")
+CompletedSurvey[is.na(CompletedSurvey$Salary)] <- mean(CompletedSurvey$Salary, na.rm = TRUE)
+CompletedSurvey[is.na(CompletedSurvey$Age)] <- mean(CompletedSurvey$Age, na.rm = TRUE)
+CompletedSurvey[is.na(CompletedSurvey$Age)] <- mean(CompletedSurvey$Credit, na.rm = TRUE)
+cor(CompletedSurvey)
+View(CompletedSurvey)
+str(CompletedSurvey)
+correlationMatrix <- cor(CompletedSurvey)
+correlationMatrix
+CompletedSurvey$Elevel<- NULL
+CompletedSurvey$Zipcode<- NULL
+CompletedSurvey$Car<- NULL
+CompletedSurvey$Brand <- as.factor(CompletedSurvey$Brand)
+
+#create training and test sets
+set.seed(123)
+inTrain<- createDataPartition(y = CompletedSurvey$Brand, p=.75, list = FALSE)
+str(inTrain)
+training<- CompletedSurvey[inTrain,]
+testing<- CompletedSurvey[-inTrain,]
+nrow(training)
+nrow(testing)
+
+#create the model
+PLSModel<- train(Brand ~ ., training, method = "pls", preProcess = c("center", "scale"))
+
+#View the Model
+PLSModel
+
+#Caret Pre-Processing
+fitControl<- trainControl(method="repeatedcv", number=10, repeats=3)
+KNNGrid <- expand.grid(k=c(1:100))
+KNNGrid
+
+#Run KNN Model
+KNNModel<- train(Brand~., data=training,method="knn",tuneGrid=KNNGrid,trControl=fitControl,preProc = c("center", "scale"))
+
+#View KNN Model
+print(KNNModel)
+plot(KNNModel)
+
+#Predict Brand preferences
+#View Metrics
+Predictions1<- predict(KNNModel, newdata=training)
+ConfusionMatrix1<-confusionMatrix(KNNModel,newdata=training)
+ConfusionMatrix1
+
+summary(Predictions1)
+
+#OR
+
+postResample(pred=Predictions1, obs=testing$Brand)
+
+#Predictions using testset
+Predictions2<- predict(KNNModel, newdata=testing)
+ConfusionMatrix2<-confusionMatrix(KNNModel,newdata=testing)
+ConfusionMatrix2
+
+summary(Predictions2)
+
+#OR
+postResample(pred=Predictions1, obs=testing$Brand)
