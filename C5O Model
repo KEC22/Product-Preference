@@ -1,0 +1,34 @@
+#C50 Model
+#Create training/testing sets if I already done so.
+set.seed(123)
+inTrain<- createDataPartition(y = CompletedSurvey$Brand, p=.75, list = FALSE)
+training<- CompletedSurvey[inTrain,]
+testing<- CompletedSurvey[-inTrain,]
+
+#Caret Pre-Processing
+FitControl <- trainControl(method="repeatedcv", number=10, repeats=3)
+C50Grid <- expand.grid(.trials = c(1:30),.model = c("tree", "rules"),.winnow = c(TRUE, FALSE))
+C50Grid
+
+#Build Model
+C50Fit1 <- train(Brand~.,data=training,method = "C5.0",tuneGrid = C50Grid,trControl = FitControl, metric = "Accuracy",importance = TRUE)  
+
+#View Model
+plot(C50Fit1)
+print(C50Fit1)
+
+#Predict Brand preferences
+#Predictions using traingset
+Predictions1<- predict(C50Fit1, training)
+ConfusionMatrix1<-confusionMatrix(C50Fit1,newdata=training)
+ConfusionMatrix1
+
+summary(Predictions1)
+
+#Predictions using testset
+Predictions2<- predict(C50Fit1, newdata=testing)
+ConfusionMatrix2<-confusionMatrix(C50Fit1,newdata=testing)
+ConfusionMatrix2
+
+Summary(Predictions2)
+
